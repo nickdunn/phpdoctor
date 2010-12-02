@@ -175,6 +175,41 @@ class HTMLWriter
 	
 	function __removeTextFromMarkup($text) {
 		return trim(preg_replace('/<[^>]*>/', '', $text));
+	}	
+	
+	
+	function _processTagsHTML(&$tags)
+    {
+		$tagString = '';
+		foreach ($tags as $key => $tag) {
+			if ($key != '@text') {
+				if (is_array($tag)) {
+                    $hasText = FALSE;
+                    foreach ($tag as $key => $tagFromGroup) {
+                        if ($tagFromGroup->text() != '') {
+                            $hasText = TRUE;
+                        }
+                    }
+                    if ($hasText) {
+                        $tagString .= '<dt>'.$tag[0]->displayName().":</dt>\n";
+                        foreach ($tag as $tagFromGroup) {
+                            $tagString .= '<dd>'.$tagFromGroup->text()."</dd>\n";
+                        }
+                    }
+				} else {
+					$text = $tag->text();
+					if ($text != '') {
+						$tagString .= '<dt>'.$tag->displayName().":</dt>\n";
+						$tagString .= '<dd>'.$text."</dd>\n";
+					} elseif ($tag->displayEmpty()) {
+						$tagString .= '<dt>'.$tag->displayName().".</dt>\n";
+					}
+				}
+			}
+		}
+        if ($tagString) {
+            return "<dl>\n" . $tagString . "</dl>\n";
+        }
 	}
 	
 	/** Format tags for output.
@@ -182,7 +217,7 @@ class HTMLWriter
 	 * @param Tag[] tags
 	 * @return str The string representation of the elements doc tags
 	 */
-	function _processTags(&$tags, $doc=NULL)
+	function _processTags(&$tags, $doc=NULL, &$dom_wrapper)
     {
 	
 		if(is_null($doc)) return '';
@@ -204,19 +239,30 @@ class HTMLWriter
                     if ($hasText) {
 						foreach ($tag as $tagFromGroup) {							
 							$found_tags[] = array(
-								'type' => $tag[0]->displayName(),
-								'text' => $tagFromGroup->text()
-								
+								'name' => $tag[0]->displayName(),
+								'text' => $tagFromGroup->text(),
+								//'type' => $tag->typeName()
 							);
                         }
                     }
 
 				} else {
-
-					$found_tags[] = array(
-						'type' => $tag->displayName(),
-						'text' => $tag->text()
-					);
+					
+					$text = $tag->text();
+					if ($text != '') {
+						
+						$found_tags[] = array(
+							'name' => $tag->displayName(),
+							'text' => $tag->text()
+						);
+						
+					} elseif ($tag->displayEmpty()) {
+						
+						$found_tags[] = array(
+							'name' => $tag->displayName()
+						);
+						
+					}
 
 				}
 			}
@@ -241,16 +287,68 @@ class HTMLWriter
 			}
 			
 			$dom_tag = $doc->createElement('tag', $description);
-			$dom_tag->setAttribute('group', $tag['type']);
-			if(!empty($type)) $dom_tag->setAttribute('type', $type);			
+			$dom_tag->setAttribute('group', $tag['name']);
+			
+			$this->parsePackageAndClassFromHyperlink($tag['text'], $dom_tag);
+			
+			if(!empty($type)) $dom_tag->setAttribute('type', $type);
+			
+			//$dom_tag->setAttribute('new-type', $tag['type']);
+			
 			//if(!empty($description) && !empty($type))
 			$dom_tags->appendChild($dom_tag);
 			
 		}
 		
-		return $dom_tags;
+		if (count($found_tags) > 0) $dom_wrapper->appendChild($dom_tags);
 		
 	}
+	
+	function parsePackageAndClassFromHyperlink($text, &$dom_wrapper) {
+		// <a href="../unknown/administrationpage.html#build()">build()</a>
+		$matches = array();
+		$href = preg_match("/\"(.*)\"/", $text, $matches);
+		if (isset($matches[1])) {
+			$url = $matches[1];
+			$url = trim($url, '.');
+			$url = trim($url, '/');
+			$package = reset(explode('/', $url));
+			$class = reset(explode('.', end(explode('/', $url)) ));
+			
+			$dom_wrapper->setAttribute('package-handle', $extras['package']);
+			$dom_wrapper->setAttribute('class-handle', $extras['class']);
+		}
+	}
+	
+	function getSignature($element, $doc, &$dom_wrapper)
+    {
+		$signature = '';
+		$myPackage =& $element->containingPackage();
+		foreach($element->_parameters as $param) {
+			$type =& $param->type();
+			$classDoc =& $type->asClassDoc();
+			
+			$dom_argument = $doc->createElement('item');
+			$dom_argument->setAttribute('name', $param->name());
+			$dom_argument->setAttribute('type', $type->typeName());
+			
+			if ($classDoc) {
+				$packageDoc =& $classDoc->containingPackage();
+				
+				$dom_argument->setAttribute('package', $classDoc->packageName());
+				$dom_argument->setAttribute('class', $classDoc->name());
+				
+				$signature .= '<a href="'.str_repeat('../', $myPackage->depth() + 1).$classDoc->asPath().'">'.$classDoc->name().'</a> '.$param->name().', ';
+			} else {
+				$signature .= $type->typeName().' '.$param->name().', ';
+			}
+			
+			$dom_wrapper->appendChild($dom_argument);
+			
+		}
+		//return '('.substr($signature, 0, -2).')';
+	}
+	
 	
 	/** Convert inline tags into a string for outputting.
 	 *
@@ -261,7 +359,7 @@ class HTMLWriter
 	function _processInlineTags(&$tag, $first = FALSE)
     {
 		if ($tag) {
-			$description = '<p>';
+			//$description = '<p>';
 			if ($first) {
 				$tags =& $tag->firstSentenceTags();
 			} else {
@@ -271,11 +369,11 @@ class HTMLWriter
 				foreach ($tags as $aTag) {
 					if ($aTag) {
 						$tagText = $aTag->text();
-						$description .= str_replace("\n\n", '</p><p>', $tagText);
+						$description .= str_replace("\n\n", ' ', $tagText);
 					}
 				}
 			}
-			$description .= '</p>';
+			//$description .= '</p>';
             if ($first) {
                 $description = $this->_stripBlockTags($description);
             }

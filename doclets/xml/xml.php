@@ -155,7 +155,7 @@ class Xml
 		//$packageIndexFrameWriter =& new packageIndexFrameWriter($this);
 
 		// write package summaries
-		//$packageWriter =& new packageWriter($this);
+		$packageWriter =& new packageWriter($this);
 		
 		// write package frame
 		//$packageFrameWriter =& new packageFrameWriter($this);

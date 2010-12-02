@@ -44,16 +44,6 @@ class ClassWriter extends HTMLWriter
         ksort($packages);
 
 		foreach ($packages as $packageName => $package) {
-
-			/*$this->_sections[0] = array('title' => 'Overview', 'url' => 'overview-summary.html');
-			$this->_sections[1] = array('title' => 'Package', 'url' => $package->asPath().'/package-summary.html');
-			$this->_sections[2] = array('title' => 'Class', 'selected' => TRUE);
-			//$this->_sections[3] = array('title' => 'Use');
-			if ($phpdoctor->getOption('tree')) $this->_sections[4] = array('title' => 'Tree', 'url' => $package->asPath().'/package-tree.html');
-			if ($doclet->includeSource()) $this->_sections[5] = array('title' => 'Files', 'url' => 'overview-files.html');
-			$this->_sections[6] = array('title' => 'Deprecated', 'url' => 'deprecated-list.html');
-			$this->_sections[7] = array('title' => 'Todo', 'url' => 'todo-list.html');
-			$this->_sections[8] = array('title' => 'Index', 'url' => 'index-all.html');*/
 			
 			$this->_depth = $package->depth() + 1;
 			
@@ -66,30 +56,32 @@ class ClassWriter extends HTMLWriter
 					$doc = new DomDocument();
 					$dom_class = $doc->createElement('class');
 					
-					ob_start();
-					
-					//echo '<div class="qualifiedName">aa', $class->qualifiedName(), "</div>\n";
-					$this->_sourceLocation($class);
-					
 					if ($class->isInterface()) {
 						$dom_class->setAttribute('type', 'interface');
 					} else {
 						$dom_class->setAttribute('type', 'class');
 					}
 					
-					$dom_class->appendChild(
-						$doc->createElement('name', $class->name())
-					);
+					$dom_class->setAttribute('name', $class->name());
+					$dom_class->setAttribute('handle', strtolower($class->name()));
 					
-					$dom_location = $doc->createElement('location', $this->_sourceLocation($class));
+					$dom_package = $doc->createElement('package');
+					$dom_package->setAttribute('name', $class->packageName());
+					$dom_package->setAttribute('handle', $class->packageName());
+					$dom_class->appendChild($dom_package);
+					
+					//$dom_class->appendChild(
+					//	$doc->createElement('qualified-name', $class->qualifiedName())
+					//);
+					
+					$dom_location = $doc->createElement('location', $class->sourceFilename());
+					$dom_location->setAttribute('line', $class->sourceLine());
 					$dom_class->appendChild($dom_location);
 					
-					$tree = $doc->createElement('tree');
-					// TODO
-					// echo '<pre class="tree">';
-					// 					$result = $this->_buildTree($rootDoc, $classes[$name]);
-					// 					echo $result[0];
-					// 					echo "</pre>\n\n";
+					// $tree = $doc->createElement('tree');
+					// // TODO
+					// // 					$result = $this->_buildTree($rootDoc, $classes[$name]);
+					// // 					echo $result[0];
 					
 					$implements =& $class->interfaces();
 					if (count($implements) > 0) {						
@@ -124,7 +116,7 @@ class ClassWriter extends HTMLWriter
 						$dom_class->appendChild($dom_description);
 					}
 					
-					$dom_class->appendChild($this->_processTags($class->tags(), $doc));
+					$this->_processTags($class->tags(), $doc, $dom_class);
 
 					$constants =& $class->constants();
                     ksort($constants);
@@ -143,24 +135,32 @@ class ClassWriter extends HTMLWriter
 							
 							$dom_constant = $doc->createElement('constant');
 							
-							$type = $field->modifiers(FALSE) . ' ' . $field->typeAsString();
+							$dom_modifiers = $doc->createElement('modifiers');
+							foreach(explode(' ', trim($field->modifiers())) as $modifier) {
+								$dom_modifiers->appendChild($doc->createElement('modifier', $modifier));
+							}
+							$dom_constant->appendChild($dom_modifiers);
+							
+							$type = $field->typeAsString();
 							$type = $this->__removeTextFromMarkup($type);
 							
-							$dom_constant->setAttribute('type', $type);
 							$dom_constant->setAttribute('name', ((!$field->constantValue()) ? "$" : "") . $field->name());
+							$dom_constant->setAttribute('type', $type);
+							
 							if ($field->value()) $dom_constant->setAttribute('value', htmlspecialchars($field->value()));
 							
-							$dom_constant_location = $doc->createElement('location', $this->_sourceLocation($field));
+							$dom_constant_location = $doc->createElement('location', $field->sourceFilename());
+							$dom_constant_location->setAttribute('line', $field->sourceLine());
 							$dom_constant->appendChild($dom_constant_location);
 							
 							if ($textTag) {
 								$dom_constant_description = $doc->createElement('description',
-									strip_tags($this->_processInlineTags($textTag, TRUE), '<a><b><strong><u><em>')
+									strip_tags($this->_processInlineTags($textTag), '<a><b><strong><u><em>')
 								);
 								$dom_constant->appendChild($dom_constant_description);
 							}
 							
-							$dom_constant->appendChild($this->_processTags($field->tags(), $doc));
+							$this->_processTags($field->tags(), $doc, $dom_constant);
 							
 							$dom_constants->appendChild($dom_constant);
 							
@@ -179,24 +179,32 @@ class ClassWriter extends HTMLWriter
 							
 							$dom_field = $doc->createElement('field');
 							
-							$type = $field->modifiers(FALSE) . ' ' . $field->typeAsString();
+							$dom_modifiers = $doc->createElement('modifiers');
+							foreach(explode(' ', trim($field->modifiers())) as $modifier) {
+								$dom_modifiers->appendChild($doc->createElement('modifier', $modifier));
+							}
+							$dom_field->appendChild($dom_modifiers);
+							
+							$type = $field->typeAsString();
 							$type = $this->__removeTextFromMarkup($type);
 							
-							$dom_field->setAttribute('type', $type);
 							$dom_field->setAttribute('name', ((!$field->constantValue()) ? "$" : "") . $field->name());
+							$dom_field->setAttribute('type', $type);
+							
 							if ($field->value()) $dom_field->setAttribute('value', htmlspecialchars($field->value()));
 							
-							$dom_field_location = $doc->createElement('location', $this->_sourceLocation($field));
+							$dom_field_location = $doc->createElement('location', $field->sourceFilename());
+							$dom_field_location->setAttribute('line', $field->sourceLine());
 							$dom_field->appendChild($dom_field_location);
 							
 							if ($textTag) {
 								$dom_field_description = $doc->createElement('description',
-									strip_tags($this->_processInlineTags($textTag, TRUE), '<a><b><strong><u><em>')
+									strip_tags($this->_processInlineTags($textTag), '<a><b><strong><u><em>')
 								);
 								$dom_field->appendChild($dom_field_description);
 							}
 							
-							$dom_field->appendChild($this->_processTags($field->tags(), $doc));
+							$this->_processTags($field->tags(), $doc, $dom_field);
 							
 							$dom_fields->appendChild($dom_field);
 						}
@@ -208,8 +216,9 @@ class ClassWriter extends HTMLWriter
 					if ($class->superclass()) {
                         $superclass =& $rootDoc->classNamed($class->superclass());
                         if ($superclass) {
-							// TODO
-                            $this->inheritFields($superclass, $rootDoc, $package);
+							$dom_inherited_fields = $doc->createElement('inherited-fields');
+                            $this->inheritFields($superclass, $rootDoc, $package, $doc, $dom_inherited_fields);
+							$dom_class->appendChild($dom_inherited_fields);
                         }
 					}
 
@@ -223,27 +232,41 @@ class ClassWriter extends HTMLWriter
 							
 							$dom_method = $doc->createElement('method');
 							
-							$type = $method->modifiers(FALSE) . ' ' . $method->returnTypeAsString();
+							$dom_modifiers = $doc->createElement('modifiers');
+							foreach(explode(' ', trim($method->modifiers())) as $modifier) {
+								$dom_modifiers->appendChild($doc->createElement('modifier', $modifier));
+							}
+							$dom_method->appendChild($dom_modifiers);
+							
+							$type = $method->returnTypeAsString();
 							$type = $this->__removeTextFromMarkup($type);
 							
-							$dom_method->setAttribute('type', $type);
 							$dom_method->setAttribute('name', $method->name());
+							$dom_method->setAttribute('type', $type);							
 							
-							$signature = preg_replace ('/<[^>]*>/', '', $method->flatSignature());
-							$signature = trim($signature, ' ()');
-							if (!empty($signature)) $dom_method->setAttribute('signature', $signature);
+							$dom_signature = $doc->createElement('signature');
+							$this->getSignature($method, $doc, $dom_signature);
+							$dom_method->appendChild($dom_signature);
 							
-							$dom_method_location = $doc->createElement('location', $this->_sourceLocation($method));
+							//$signature = $this->flatSignature($method);
+							//$signature = preg_replace ('/<[^>]*>/', '', $method->flatSignature());
+							// $signature = trim($signature, ' ()');
+							// if (!empty($signature)) $dom_method->setAttribute('signature', $signature);
+							
+							$dom_method_location = $doc->createElement('location', $method->sourceFilename());
+							$dom_method_location->setAttribute('line', $method->sourceLine());
 							$dom_method->appendChild($dom_method_location);
 							
 							if ($textTag) {
 								$dom_method_description = $doc->createElement('description',
-									strip_tags($this->_processInlineTags($textTag, TRUE), '<a><b><strong><u><em>')
+									strip_tags($this->_processInlineTags($textTag), '<a><b><strong><u><em>')
 								);
 								$dom_method->appendChild($dom_method_description);
 							}
 							
-							$dom_method->appendChild($this->_processTags($method->tags(), $doc));
+							$this->_processTags($method->tags(), $doc, $dom_method);
+							// $dom_tags = $doc->createElement('new-tags', $this->_processTagsHTML($method->tags()));
+							// $dom_method->appendChild($dom_tags);
 							
 							$dom_methods->appendChild($dom_method);
                         }
@@ -255,18 +278,17 @@ class ClassWriter extends HTMLWriter
 					if ($class->superclass()) {
                         $superclass =& $rootDoc->classNamed($class->superclass());
                         if ($superclass) {
-							// TODO
-                            $this->inheritMethods($superclass, $rootDoc, $package);
+							$dom_inherited_methods = $doc->createElement('inherited-methods');
+                            $this->inheritMethods($superclass, $rootDoc, $package, $doc, $dom_inherited_methods);
+							$dom_class->appendChild($dom_inherited_methods);
                         }
 					}
 					
 					$doc->appendChild($dom_class);
-					echo $doc->saveXML();
 					
-					$this->_output = ob_get_contents();
-					ob_end_clean();
-					
+					$this->_output = $doc->saveXML();
 					$this->_write($package->asPath().'/'.strtolower($class->name()).'.xml', $class->name(), TRUE);
+					
 				}
 			}
 		}
@@ -279,7 +301,7 @@ class ClassWriter extends HTMLWriter
 	 * @param int depth Depth of recursion
 	 * @return mixed[]
 	 */
-	function _buildTree(&$rootDoc, &$class, $depth = NULL)
+	function _buildTree(&$rootDoc, &$class, $depth = NULL, $doc, $dom_wrapper)
     {
 		if ($depth === NULL) {
 			$start = TRUE;
@@ -292,7 +314,7 @@ class ClassWriter extends HTMLWriter
 		if ($class->superclass()) {
 			$superclass =& $rootDoc->classNamed($class->superclass());
 			if ($superclass) {
-				$result = $this->_buildTree($rootDoc, $superclass, $depth);
+				$result = $this->_buildTree($rootDoc, $superclass, $depth, $doc);
 				$output .= $result[0];
 				$depth = ++$result[1];
 			} else {
@@ -306,9 +328,9 @@ class ClassWriter extends HTMLWriter
 			$output .= str_repeat('   ', $depth).' └─';
 		}
 		if ($start) {
-			$output .= '<strong>'.$class->name().'</strong><br />';
+			$output .= $class->name() . '<br />';
 		} else {
-			$output .= '<a href="'.str_repeat('../', $this->_depth).$class->asPath().'">'.$class->name().'</a><br>';
+			$output .= '<a href="'.$class->asPath().'">'.$class->name().'</a><br>';
 		}
 		return array($output, $depth);
 	}
@@ -320,30 +342,42 @@ class ClassWriter extends HTMLWriter
 	 * @param RootDoc rootDoc
 	 * @param PackageDoc package
 	 */
-	function inheritFields(&$element, &$rootDoc, &$package)
+	function inheritFields(&$element, &$rootDoc, &$package, $doc, &$dom_wrapper)
     {
 		$fields =& $element->fields();
 		if ($fields) {
             ksort($fields);
 			$num = count($fields); $foo = 0;
-			echo '<table class="inherit">', "\n";
-			echo '<tr><th colspan="2">Fields inherited from ', $element->qualifiedName(), "</th></tr>\n";
-			echo '<tr><td>';
+			//echo '<table class="inherit">', "\n";
+			//echo '<tr><th colspan="2">Fields inherited from ', $element->qualifiedName(), "</th></tr>\n";
+			//echo '<tr><td>';
+			
 			foreach($fields as $field) {
-				echo '<a href="', str_repeat('../', $this->_depth), $field->asPath(), '">', $field->name(), '</a>';
+				
+				$dom_wrapper->setAttribute('package', $field->packageName());				
+				$class =& $field->containingClass();
+				$dom_wrapper->setAttribute('class', $class->name());				
+				
+				$dom_field = $doc->createElement('field');
+				$dom_field->setAttribute('name', $field->name());
+				
+				$dom_wrapper->appendChild($dom_field);
+				
+				//echo '<a href="', str_repeat('../', $this->_depth), $field->asPath(), '">', $field->name(), '</a>';
 				if (++$foo < $num) {
-					echo ', ';
+					//echo ', ';
 				}
 			}
-			echo '</td></tr>';
-			echo "</table>\n\n";
+			//echo '</td></tr>';
+			//echo "</table>\n\n";
 			if ($element->superclass()) {
                 $superclass =& $rootDoc->classNamed($element->superclass());
                 if ($superclass) {
-                    $this->inheritFields($superclass, $rootDoc, $package);
+                    $this->inheritFields($superclass, $rootDoc, $package, $doc, $dom_wrapper);
                 }
 			}
 		}
+
 	}
 	
 	/** Display the inherited methods of an element. This method calls itself
@@ -353,27 +387,36 @@ class ClassWriter extends HTMLWriter
 	 * @param RootDoc rootDoc
 	 * @param PackageDoc package
 	 */
-	function inheritMethods(&$element, &$rootDoc, &$package)
+	function inheritMethods(&$element, &$rootDoc, &$package, $doc, &$dom_wrapper)
     {
 		$methods =& $element->methods();
 		if ($methods) {
             ksort($methods);
 			$num = count($methods); $foo = 0;
-			echo '<table class="inherit">', "\n";
-			echo '<tr><th colspan="2">Methods inherited from ', $element->qualifiedName(), "</th></tr>\n";
-			echo '<tr><td>';
+			// echo '<table class="inherit">', "\n";
+			// echo '<tr><th colspan="2">Methods inherited from ', $element->qualifiedName(), "</th></tr>\n";
+			// echo '<tr><td>';
 			foreach($methods as $method) {
-				echo '<a href="', str_repeat('../', $this->_depth), $method->asPath(), '">', $method->name(), '</a>';
+				
+				$dom_wrapper->setAttribute('package', $method->packageName());				
+				$class =& $method->containingClass();
+				$dom_wrapper->setAttribute('class', $class->name());
+				
+				$dom_method = $doc->createElement('method');
+				$dom_method->setAttribute('name', $method->name());
+				$dom_wrapper->appendChild($dom_method);
+				
+				//echo '<a href="', str_repeat('../', $this->_depth), $method->asPath(), '">', $method->name(), '</a>';
 				if (++$foo < $num) {
-					echo ', ';
+					//echo ', ';
 				}
 			}
-			echo '</td></tr>';
-			echo "</table>\n\n";
+			// echo '</td></tr>';
+			// echo "</table>\n\n";
 			if ($element->superclass()) {
                 $superclass =& $rootDoc->classNamed($element->superclass());
                 if ($superclass) {
-                    $this->inheritMethods($superclass, $rootDoc, $package);
+                    $this->inheritMethods($superclass, $rootDoc, $package, $doc, $dom_wrapper);
                 }
 			}
 		}

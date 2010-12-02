@@ -199,7 +199,7 @@ class DeprecatedWriter extends HTMLWriter
         $this->_output = ob_get_contents();
         ob_end_clean();
 
-        $this->_write('deprecated-list.html', 'Deprecated', TRUE);
+        $this->_write('deprecated-list.xml', 'Deprecated', TRUE);
 	
 	}
   

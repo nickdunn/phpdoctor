@@ -208,6 +208,7 @@ class PackageWriter extends HTMLWriter
 				$classes =& $package->ordinaryClasses();
 				if ($classes) {
                     ksort($classes);
+					// SORT?
 					foreach ($classes as $class) {
 						$this->_buildTree($tree, $class);
 					}
