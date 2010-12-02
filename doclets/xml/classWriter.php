@@ -54,6 +54,9 @@ class ClassWriter extends HTMLWriter
 				foreach ($classes as $name => $class) {
 					
 					$doc = new DomDocument();
+					$doc->preserveWhiteSpace = FALSE;
+					$doc->formatOutput = TRUE;
+					
 					$dom_class = $doc->createElement('class');
 					
 					if ($class->isInterface()) {

@@ -42,6 +42,9 @@ class PackageWriter extends HTMLWriter
         ksort($packages);
 
 		$doc = new DomDocument();
+		$doc->preserveWhiteSpace = FALSE;
+		$doc->formatOutput = TRUE;
+		
 		$dom_packages = $doc->createElement('packages');
         
 		foreach($packages as $packageName => $package) {

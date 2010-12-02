@@ -374,9 +374,11 @@ class HTMLWriter
 				}
 			}
 			//$description .= '</p>';
-            if ($first) {
-                $description = $this->_stripBlockTags($description);
-            }
+            // if ($first) {
+            //     $description = $this->_stripBlockTags($description);
+            // }
+
+			$description = preg_replace("/\n/", ' ', $description);
 			return $description;
 		}
 		return NULL;
