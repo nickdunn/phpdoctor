@@ -227,11 +227,16 @@ class PackageWriter extends HTMLWriter
 		foreach($tree as $name => $element) {
 			if ($element->superclass() == $parent) {
 				
+				$dom_item = $doc->createElement('class');
+				
 				$description = NULL;
 				$textTag =& $element->tags('@text');
-				if ($textTag) $description = $this->_processInlineTags($textTag);
-
-				$dom_item = $doc->createElement('class', $description);
+				if ($textTag) {
+					$description = $this->_processInlineTags($textTag);
+					$dom_description = $doc->createElement('description', $description);
+					$dom_item->appendChild($dom_description);
+				}
+				
 				$dom_item->setAttribute('name', $element->name());
 				$dom_item->setAttribute('handle', strtolower($element->name()));
 				
