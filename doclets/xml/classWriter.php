@@ -88,13 +88,17 @@ class ClassWriter extends HTMLWriter
 					
 					$implements =& $class->interfaces();
 					if (count($implements) > 0) {						
-						$interfaces = $doc->createElement('interfaces');
+						$dom_interfaces = $doc->createElement('interfaces');
 						foreach ($implements as $interface) {							
 							$dom_interface = $doc->createElement('interface', $interface->name());
 							$dom_interface->setAttribute('package', $interface->packageName());
-							$dom_interface->setAttribute('path', str_repeat('../', $this->_depth), $interface->asPath());
-							$dom_class->appendChild($dom_interface);
+							
+							//$dom_interface->setAttribute('path', str_repeat('../', $this->_depth), $interface->asPath());
+							//$this->buildPath($interface, $doc, $dom_interface);
+							
+							$dom_interfaces->appendChild($dom_interface);
 						}
+						$dom_class->appendChild($dom_interfaces);
 					}
 					
 					$dom_modifiers = $doc->createElement('modifiers');
@@ -247,7 +251,7 @@ class ClassWriter extends HTMLWriter
 							$dom_method->setAttribute('name', $method->name());
 							$dom_method->setAttribute('type', $type);							
 							
-							$dom_signature = $doc->createElement('signature');
+							$dom_signature = $doc->createElement('parameters');
 							$this->getSignature($method, $doc, $dom_signature);
 							$dom_method->appendChild($dom_signature);
 							
@@ -348,12 +352,16 @@ class ClassWriter extends HTMLWriter
 	function inheritFields(&$element, &$rootDoc, &$package, $doc, &$dom_wrapper)
     {
 		$fields =& $element->fields();
+		
 		if ($fields) {
+			
             ksort($fields);
 			$num = count($fields); $foo = 0;
-			//echo '<table class="inherit">', "\n";
-			//echo '<tr><th colspan="2">Fields inherited from ', $element->qualifiedName(), "</th></tr>\n";
-			//echo '<tr><td>';
+			
+			$dom_class = $doc->createElement('class');
+			
+			$dom_class->setAttribute('name', $element->_name);
+			$dom_class->setAttribute('package', $element->_package);
 			
 			foreach($fields as $field) {
 				
@@ -364,15 +372,14 @@ class ClassWriter extends HTMLWriter
 				$dom_field = $doc->createElement('field');
 				$dom_field->setAttribute('name', $field->name());
 				
-				$dom_wrapper->appendChild($dom_field);
+				//$this->buildPath($field, $doc, $dom_field);
 				
-				//echo '<a href="', str_repeat('../', $this->_depth), $field->asPath(), '">', $field->name(), '</a>';
-				if (++$foo < $num) {
-					//echo ', ';
-				}
+				$dom_class->appendChild($dom_field);
+				
 			}
-			//echo '</td></tr>';
-			//echo "</table>\n\n";
+			
+			$dom_wrapper->appendChild($dom_class);
+			
 			if ($element->superclass()) {
                 $superclass =& $rootDoc->classNamed($element->superclass());
                 if ($superclass) {
@@ -396,9 +403,12 @@ class ClassWriter extends HTMLWriter
 		if ($methods) {
             ksort($methods);
 			$num = count($methods); $foo = 0;
-			// echo '<table class="inherit">', "\n";
-			// echo '<tr><th colspan="2">Methods inherited from ', $element->qualifiedName(), "</th></tr>\n";
-			// echo '<tr><td>';
+			
+			$dom_class = $doc->createElement('class');
+			
+			$dom_class->setAttribute('name', $element->_name);
+			$dom_class->setAttribute('package', $element->_package);
+			
 			foreach($methods as $method) {
 				
 				$dom_wrapper->setAttribute('package', $method->packageName());				
@@ -407,15 +417,12 @@ class ClassWriter extends HTMLWriter
 				
 				$dom_method = $doc->createElement('method');
 				$dom_method->setAttribute('name', $method->name());
-				$dom_wrapper->appendChild($dom_method);
 				
-				//echo '<a href="', str_repeat('../', $this->_depth), $method->asPath(), '">', $method->name(), '</a>';
-				if (++$foo < $num) {
-					//echo ', ';
-				}
+				$dom_class->appendChild($dom_method);
 			}
-			// echo '</td></tr>';
-			// echo "</table>\n\n";
+			
+			$dom_wrapper->appendChild($dom_class);
+
 			if ($element->superclass()) {
                 $superclass =& $rootDoc->classNamed($element->superclass());
                 if ($superclass) {

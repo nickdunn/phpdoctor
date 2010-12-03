@@ -323,6 +323,34 @@ class HTMLWriter
         return strip_tags($string, '<a><b><strong><i><em><code><q><acronym><abbr><ins><del><kbd><samp><sub><sup><tt><var><big><small>');
     }
 
+
+	function hyperlinkContext($object) {
+		
+		if ($object->isClass() || $object->isInterface() || $object->isException()) {
+			return strtolower(str_replace('.', '/', str_replace('\\', '/', $object->_package)).'/'.$object->_name.'.html');
+		} elseif ($object->isField()) {
+			$class =& $object->containingClass();
+			if ($class) {
+				return strtolower(str_replace('.', '/', str_replace('\\', '/', $object->_package)).'/'.$class->name().'.html#').$object->_name;
+			} else {
+				return strtolower(str_replace('.', '/', str_replace('\\', '/', $object->_package)).'/package-globals.html#').$object->_name;
+			}
+		} elseif ($object->isConstructor() || $object->isMethod()) {
+			$class =& $object->containingClass();
+			if ($class) {
+				return strtolower(str_replace('.', '/', str_replace('\\', '/', $object->_package)).'/'.$class->name().'.html#').$object->_name.'()';
+			} else {
+				return strtolower(str_replace('.', '/', str_replace('\\', '/', $object->_package)).'/package-functions.html#').$object->_name.'()';
+			}
+		} elseif ($object->isGlobal()) {
+			return strtolower(str_replace('.', '/', str_replace('\\', '/', $object->_package)).'/package-globals.html#').$object->_name;
+		} elseif ($object->isFunction()) {
+			return strtolower(str_replace('.', '/', str_replace('\\', '/', $object->_package)).'/package-functions.html#').$object->_name.'()';
+		}
+		return NULL;
+		
+	}
+
 }
 
 ?>

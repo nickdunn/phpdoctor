@@ -308,15 +308,40 @@ class HTMLWriter
 		// <a href="../unknown/administrationpage.html#build()">build()</a>
 		$matches = array();
 		$href = preg_match("/\"(.*)\"/", $text, $matches);
+		
 		if (isset($matches[1])) {
+			
 			$url = $matches[1];
-			$url = trim($url, '.');
-			$url = trim($url, '/');
+			
+			//$url = trim($url, '.');
+			//$url = trim($url, '/');
+			
+			$url = preg_replace("/^(..\/){1,}/", '', $url); //remove leading ../../../
+			$url = preg_replace("/.html/", '', $url); // remove html extension
+			
 			$package = reset(explode('/', $url));
 			$class = reset(explode('.', end(explode('/', $url)) ));
 			
-			$dom_wrapper->setAttribute('package-handle', $extras['package']);
-			$dom_wrapper->setAttribute('class-handle', $extras['class']);
+			$class = reset(explode('#', $class));
+			
+			if (preg_match("/^package-globals/", $class)) {
+				// is a global
+				$dom_wrapper->setAttribute('type', 'global');
+				$dom_wrapper->setAttribute('package-handle', $package);
+			}
+			elseif (preg_match("/^package-functions/", $class)) {
+				$dom_wrapper->setAttribute('type', 'function');
+				$dom_wrapper->setAttribute('package-handle', $package);
+				// is a function
+			}
+			else {
+				// is a class
+				$dom_wrapper->setAttribute('class', 'function');
+				$dom_wrapper->setAttribute('package-handle', $package);
+				$dom_wrapper->setAttribute('class-handle', $class);
+				
+			}
+			
 		}
 	}
 	
@@ -324,11 +349,13 @@ class HTMLWriter
     {
 		$signature = '';
 		$myPackage =& $element->containingPackage();
+		
 		foreach($element->_parameters as $param) {
+			
 			$type =& $param->type();
 			$classDoc =& $type->asClassDoc();
 			
-			$dom_argument = $doc->createElement('item');
+			$dom_argument = $doc->createElement('parameter');
 			$dom_argument->setAttribute('name', $param->name());
 			$dom_argument->setAttribute('type', $type->typeName());
 			
@@ -338,9 +365,9 @@ class HTMLWriter
 				$dom_argument->setAttribute('package', $classDoc->packageName());
 				$dom_argument->setAttribute('class', $classDoc->name());
 				
-				$signature .= '<a href="'.str_repeat('../', $myPackage->depth() + 1).$classDoc->asPath().'">'.$classDoc->name().'</a> '.$param->name().', ';
+				//$signature .= '<a href="'.str_repeat('../', $myPackage->depth() + 1).$classDoc->asPath().'">'.$classDoc->name().'</a> '.$param->name().', ';
 			} else {
-				$signature .= $type->typeName().' '.$param->name().', ';
+				//$signature .= $type->typeName().' '.$param->name().', ';
 			}
 			
 			$dom_wrapper->appendChild($dom_argument);
@@ -393,6 +420,76 @@ class HTMLWriter
     {
         return strip_tags($string, '<a><b><strong><i><em><code><q><acronym><abbr><ins><del><kbd><samp><sub><sup><tt><var><big><small>');
     }
+
+
+	function buildPath($object, $doc, &$dom_wrapper) {
+		
+		$dom_path = $doc->createElement('hyperlink');
+		
+		if ($object->isClass() || $object->isInterface() || $object->isException()) {
+			
+			$dom_path->setAttribute('type', 'class');
+			$dom_path->setAttribute('package', $object->_package);
+			$dom_path->setAttribute('class', $object->_name);
+			$dom_wrapper->appendChild($dom_path);
+			
+		}
+		
+		elseif ($object->isField()) {
+			
+			$class =& $object->containingClass();
+			
+			$dom_path->setAttribute('type', 'field');
+			$dom_path->setAttribute('package', $object->_package);
+			
+			if ($class) {
+				// #name to class page
+				$dom_path->setAttribute('class', $object->_name);
+			}
+			else {
+				// #name to package list of globals
+				//return strtolower(str_replace('.', '/', str_replace('\\', '/', $object->_package)).'/package-globals.html#').$object->_name;
+			}
+			
+			$dom_wrapper->appendChild($dom_path);
+			
+		}
+		
+		elseif ($object->isConstructor() || $object->isMethod()) {
+			
+			$class =& $object->containingClass();
+			
+			$dom_path->setAttribute('type', 'method');
+			$dom_path->setAttribute('package', $object->_package);
+			
+			if ($class) {
+				$dom_path->setAttribute('class', $object->_name);
+			} else {
+				// #name to package functions list
+			}
+			
+			$dom_wrapper->appendChild($dom_path);
+			
+		}
+		
+		elseif ($object->isGlobal()) {
+			
+			$dom_path->setAttribute('type', 'global');
+			$dom_path->setAttribute('package', $object->_package);
+			$dom_wrapper->appendChild($dom_path);
+			
+		}
+		
+		elseif ($object->isFunction()) {
+			
+			$dom_path->setAttribute('type', 'function');
+			$dom_path->setAttribute('package', $object->_package);
+			$dom_wrapper->appendChild($dom_path);
+			
+		}
+		
+	}
+	
 
 }
 
