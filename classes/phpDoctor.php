@@ -776,7 +776,7 @@ class PHPDoctor
         
                                 case T_STRING:
                                     // read global constant
-                                    if ($token[1] == 'define') {// && $tokens[$key + 2][0] == T_CONSTANT_ENCAPSED_STRING) {
+                                    if ($token[1] == 'define' || $token[1] == 'define_safe') {// && $tokens[$key + 2][0] == T_CONSTANT_ENCAPSED_STRING) {
                                         $const =& new fieldDoc($this->_getNext($tokens, $key, T_CONSTANT_ENCAPSED_STRING), $ce, $rootDoc, $filename, $lineNumber, $this->sourcePath()); // create constant object
                                         $this->verbose('Found '.get_class($const).': global constant '.$const->name());
                                         $const->set('final', TRUE); // is constant
