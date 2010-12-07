@@ -33,6 +33,8 @@ require('deprecatedWriter.php');
 require('todoWriter.php');
 require('sourceWriter.php');
 
+require('delegateWriter.php');
+
 /** The standard doclet. This doclet generates HTML output similar to that
  * produced by the Javadoc standard doclet.
  *
@@ -177,6 +179,14 @@ class Standard
 		
 		// write todo index
 		$todoWriter =& new todoWriter($this);
+		
+		
+		
+		
+		// write delegate index
+		$delegateWriter =& new delegateWriter($this);
+		
+		
 		
 		// write source files
 		if ($this->_includeSource) {

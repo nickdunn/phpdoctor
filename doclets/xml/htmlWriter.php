@@ -291,11 +291,8 @@ class HTMLWriter
 			
 			$this->parsePackageAndClassFromHyperlink($tag['text'], $dom_tag);
 			
-			if(!empty($type)) $dom_tag->setAttribute('type', $type);
+			if(!empty($type)) $dom_tag->setAttribute('name', $type);
 			
-			//$dom_tag->setAttribute('new-type', $tag['type']);
-			
-			//if(!empty($description) && !empty($type))
 			$dom_tags->appendChild($dom_tag);
 			
 		}
@@ -318,6 +315,8 @@ class HTMLWriter
 			
 			$url = preg_replace("/^(..\/){1,}/", '', $url); //remove leading ../../../
 			$url = preg_replace("/.html/", '', $url); // remove html extension
+			
+			if (preg_match("/^http/", $url)) return;
 			
 			$package = reset(explode('/', $url));
 			$class = reset(explode('.', end(explode('/', $url)) ));
@@ -373,7 +372,9 @@ class HTMLWriter
 			$dom_wrapper->appendChild($dom_argument);
 			
 		}
-		//return '('.substr($signature, 0, -2).')';
+		
+		return $parameters;
+		
 	}
 	
 	
@@ -386,27 +387,17 @@ class HTMLWriter
 	function _processInlineTags(&$tag, $first = FALSE)
     {
 		if ($tag) {
-			//$description = '<p>';
-			if ($first) {
-				$tags =& $tag->firstSentenceTags();
-			} else {
-				$tags =& $tag->inlineTags();
-			}
+			$tags =& $tag->inlineTags();
             if ($tags) {
 				foreach ($tags as $aTag) {
 					if ($aTag) {
 						$tagText = $aTag->text();
-						$description .= str_replace("\n\n", ' ', $tagText);
+						//$description .= str_replace("\n\n", ' ', $tagText);
+						$description .= $tagText;
 					}
 				}
 			}
-			//$description .= '</p>';
-            // if ($first) {
-            //     $description = $this->_stripBlockTags($description);
-            // }
-
-			$description = preg_replace("/\n/", ' ', $description);
-			return $description;
+			return preg_replace("/\n/", ' ', $description);
 		}
 		return NULL;
 	}

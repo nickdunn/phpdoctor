@@ -1,46 +1,15 @@
 <?php
-/*
-PHPDoctor: The PHP Documentation Creator
-Copyright (C) 2004 Paul James <paul@peej.co.uk>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+class ClassWriter extends HTMLWriter {
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
-
-/** This generates the HTML API documentation for each individual interface
- * and class.
- *
- * @package PHPDoctor\Doclets\Standard
- */
-class ClassWriter extends HTMLWriter
-{
-
-	/** Build the class definitons.
-	 *
-	 * @param Doclet doclet
-	 */
-	function classWriter(&$doclet)
-    {
+	function classWriter(&$doclet) {
 	
 		parent::HTMLWriter($doclet);
-		
-		$this->_id = 'definition';
 
 		$rootDoc =& $this->_doclet->rootDoc();
 		$phpdoctor =& $this->_doclet->phpdoctor();
-		
 		$packages =& $rootDoc->packages();
+		
         ksort($packages);
 
 		foreach ($packages as $packageName => $package) {
@@ -73,18 +42,9 @@ class ClassWriter extends HTMLWriter
 					$dom_package->setAttribute('handle', $class->packageName());
 					$dom_class->appendChild($dom_package);
 					
-					//$dom_class->appendChild(
-					//	$doc->createElement('qualified-name', $class->qualifiedName())
-					//);
-					
 					$dom_location = $doc->createElement('location', $class->sourceFilename());
 					$dom_location->setAttribute('line', $class->sourceLine());
 					$dom_class->appendChild($dom_location);
-					
-					// $tree = $doc->createElement('tree');
-					// // TODO
-					// // 					$result = $this->_buildTree($rootDoc, $classes[$name]);
-					// // 					echo $result[0];
 					
 					$implements =& $class->interfaces();
 					if (count($implements) > 0) {						
@@ -92,9 +52,6 @@ class ClassWriter extends HTMLWriter
 						foreach ($implements as $interface) {							
 							$dom_interface = $doc->createElement('interface', $interface->name());
 							$dom_interface->setAttribute('package', $interface->packageName());
-							
-							//$dom_interface->setAttribute('path', str_repeat('../', $this->_depth), $interface->asPath());
-							//$this->buildPath($interface, $doc, $dom_interface);
 							
 							$dom_interfaces->appendChild($dom_interface);
 						}
@@ -162,7 +119,7 @@ class ClassWriter extends HTMLWriter
 							
 							if ($textTag) {
 								$dom_constant_description = $doc->createElement('description',
-									strip_tags($this->_processInlineTags($textTag), '<a><b><strong><u><em>')
+									$this->_processInlineTags($textTag)
 								);
 								$dom_constant->appendChild($dom_constant_description);
 							}
@@ -206,7 +163,7 @@ class ClassWriter extends HTMLWriter
 							
 							if ($textTag) {
 								$dom_field_description = $doc->createElement('description',
-									strip_tags($this->_processInlineTags($textTag), '<a><b><strong><u><em>')
+									$this->_processInlineTags($textTag)
 								);
 								$dom_field->appendChild($dom_field_description);
 							}
@@ -249,16 +206,11 @@ class ClassWriter extends HTMLWriter
 							$type = $this->__removeTextFromMarkup($type);
 							
 							$dom_method->setAttribute('name', $method->name());
-							$dom_method->setAttribute('type', $type);							
+							$dom_method->setAttribute('return', $type);
 							
 							$dom_signature = $doc->createElement('parameters');
 							$this->getSignature($method, $doc, $dom_signature);
 							$dom_method->appendChild($dom_signature);
-							
-							//$signature = $this->flatSignature($method);
-							//$signature = preg_replace ('/<[^>]*>/', '', $method->flatSignature());
-							// $signature = trim($signature, ' ()');
-							// if (!empty($signature)) $dom_method->setAttribute('signature', $signature);
 							
 							$dom_method_location = $doc->createElement('location', $method->sourceFilename());
 							$dom_method_location->setAttribute('line', $method->sourceLine());
@@ -266,14 +218,12 @@ class ClassWriter extends HTMLWriter
 							
 							if ($textTag) {
 								$dom_method_description = $doc->createElement('description',
-									strip_tags($this->_processInlineTags($textTag), '<a><b><strong><u><em>')
+									$this->_processInlineTags($textTag)
 								);
 								$dom_method->appendChild($dom_method_description);
 							}
 							
 							$this->_processTags($method->tags(), $doc, $dom_method);
-							// $dom_tags = $doc->createElement('new-tags', $this->_processTagsHTML($method->tags()));
-							// $dom_method->appendChild($dom_tags);
 							
 							$dom_methods->appendChild($dom_method);
                         }
@@ -301,46 +251,6 @@ class ClassWriter extends HTMLWriter
 		}
     }
 
-	/** Build the class hierarchy tree which is placed at the top of the page.
-	 *
-	 * @param RootDoc rootDoc The root doc
-	 * @param ClassDoc class Class to generate tree for
-	 * @param int depth Depth of recursion
-	 * @return mixed[]
-	 */
-	function _buildTree(&$rootDoc, &$class, $depth = NULL, $doc, $dom_wrapper)
-    {
-		if ($depth === NULL) {
-			$start = TRUE;
-			$depth = 0;
-		} else {
-			$start = FALSE;
-		}
-		$output = '';
-		$undefinedClass = FALSE;
-		if ($class->superclass()) {
-			$superclass =& $rootDoc->classNamed($class->superclass());
-			if ($superclass) {
-				$result = $this->_buildTree($rootDoc, $superclass, $depth, $doc);
-				$output .= $result[0];
-				$depth = ++$result[1];
-			} else {
-				$output .= $class->superclass().'<br>';
-				$output .= str_repeat('   ', $depth).' └─';
-				$depth++;
-				$undefinedClass = TRUE;
-			}
-		}
-		if ($depth > 0 && !$undefinedClass) {
-			$output .= str_repeat('   ', $depth).' └─';
-		}
-		if ($start) {
-			$output .= $class->name() . '<br />';
-		} else {
-			$output .= '<a href="'.$class->asPath().'">'.$class->name().'</a><br>';
-		}
-		return array($output, $depth);
-	}
 	
 	/** Display the inherited fields of an element. This method calls itself
 	 * recursively if the element has a parent class.
@@ -371,8 +281,6 @@ class ClassWriter extends HTMLWriter
 				
 				$dom_field = $doc->createElement('field');
 				$dom_field->setAttribute('name', $field->name());
-				
-				//$this->buildPath($field, $doc, $dom_field);
 				
 				$dom_class->appendChild($dom_field);
 				
@@ -433,5 +341,3 @@ class ClassWriter extends HTMLWriter
 	}
 
 }
-
-?>
